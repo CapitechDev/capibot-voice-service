@@ -1,0 +1,55 @@
+services:
+
+  backend:
+    image: capitech-backend:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - JWT_SECRET=qJSBO1GY036KAJV4hvtc1Gt0yBQ
+      - ADMIN_CODE=Fatec2024Votorantim
+    volumes:
+      - ./Capitech-back/src:/src/src
+      - ./Capitech-back/package.json:/src/package.json
+      - /src/node_modules
+    command: ts-node -r dotenv/config src/index.ts
+    networks:
+      - capitech-network
+
+  frontend:
+    image: capitech-front:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SERVICE_ID=service_plrbyoy
+      - NEXT_PUBLIC_TEMPLATE_ID=template_mycbjog
+      - NEXT_PUBLIC_PUBLIC_KEY=BB1sMRYW_bq9hq4fM
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=testeeeee
+    volumes:
+      - ./Capitech-front:/app
+    command: npm start
+    networks:
+      - capitech-network
+
+  n8n:
+    image: n8nio/n8n
+    restart: always
+    container_name: n8n-capitech
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - capitech-network
+
+volumes:
+  n8n_data:
+
+networks:
+  capitech-network:
