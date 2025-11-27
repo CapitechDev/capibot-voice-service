@@ -37,7 +37,7 @@ docker-compose up -d
 ```
 
 **Serviços disponíveis:**
-- **Voice Service**: `http://localhost:8000`
+- **Voice Service**: `http://localhost:4002`
 - **n8n Interface**: `http://localhost:5678` (admin/admin123)
 - **MongoDB**: `localhost:27017`
 
@@ -52,19 +52,19 @@ pip install -r requirements.txt
 
 3. Execute o serviço:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 4002
 ```
 
 ## Uso da API
 
 ### Documentação Interativa
 
-Acesse `http://localhost:8000/docs` para ver a documentação interativa do Swagger.
+Acesse `http://localhost:4002/docs` para ver a documentação interativa do Swagger.
 
 ### Criar API Key
 
 ```bash
-curl -X POST "http://localhost:8000/admin/create-api-key" \
+curl -X POST "http://localhost:4002/admin/create-api-key" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "name=meu-cliente"
 ```
@@ -76,7 +76,7 @@ curl -X POST "http://localhost:8000/admin/create-api-key" \
 #### Método 1: Upload de Arquivo
 
 ```bash
-curl -X POST "http://localhost:8000/transcribe" \
+curl -X POST "http://localhost:4002/transcribe" \
   -H "X-API-Key: sua-api-key-aqui" \
   -F "audio=@caminho/para/audio.mp3"
 ```
@@ -84,7 +84,7 @@ curl -X POST "http://localhost:8000/transcribe" \
 #### Método 2: Áudio Base64
 
 ```bash
-curl -X POST "http://localhost:8000/transcribe" \
+curl -X POST "http://localhost:4002/transcribe" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: sua-api-key-aqui" \
   -d '{
@@ -216,7 +216,7 @@ capibot-voice-service/
 
 ```bash
 # Com hot reload
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 4002
 ```
 
 ## Integração com n8n
