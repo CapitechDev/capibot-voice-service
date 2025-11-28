@@ -1,58 +1,52 @@
-name: Deploy - capibot-voice-service
+name: CI
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract repository name
+        id: repo-name
+        run: echo "REPO_NAME=$(echo ${GITHUB_REPOSITORY} | cut -d '/' -f 2)" >> $GITHUB_ENV
 
-      - name: Build & Push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Set environment variables for production
+        if: github.ref_name == 'main'
+        run: echo "APP_PORT=4002" >> $GITHUB_ENV  # porta fixa para o voice-service
 
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.1.0
+      - name: SSH deploy
+        if: github.ref_name == 'main'
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY}}
           script: |
-            echo "📦 Pulling latest Docker image..."
-            cd /app/capibot-voice-service
+            cd capitech/${{ env.REPO_NAME }}
+            git pull https://${{ secrets.GIT_TOKEN }}@github.com/capitech/${{ env.REPO_NAME }}.git ${{ github.ref_name }}
 
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            echo "🛑 Parando container antigo..."
+            docker stop ${{ env.REPO_NAME }} || true
+            docker rm ${{ env.REPO_NAME }} || true
+            docker rmi ${{ env.REPO_NAME }}:${{ env.APP_PORT }} || true
 
-            echo "🚀 Updating service..."
-            docker compose pull
-            docker compose up -d --force-recreate
+            echo "🐳 Buildando nova imagem..."
+            docker build --no-cache -t ${{ env.REPO_NAME }}:${{ env.APP_PORT }} .
 
-            echo "🧹 Cleaning old images..."
-            docker system prune -f
-
-            echo "🎉 Deploy finalizado!"
+            echo "🚀 Subindo novo container..."
+            docker run -d \
+              --name ${{ env.REPO_NAME }} \
+              -e TZ=America/Sao_Paulo \
+              -v /etc/localtime:/etc/localtime:ro \
+              -v /etc/timezone:/etc/timezone:ro \
+              -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} \
+              --restart always \
+              ${{ env.REPO_NAME }}:${{ env.APP_PORT }}
